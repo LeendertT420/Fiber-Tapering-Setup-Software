@@ -116,6 +116,11 @@ class Controller_Axis():
         command = str(self.axis_nr) + 'PR' + str(rel_pos)
         self.controller.write(command)
 
+    def set_velocity(self, vel : float) -> None:
+        print(str(vel))
+        command = str(self.axis_nr) + 'VA' + str(vel)
+        self.controller.write(command)
+
     
 
 
@@ -138,7 +143,7 @@ class Motion_Controller():
         rm = ResourceManager()
 
         print(rm.list_resources())
-        controller = rm.open_resource('ASRL4::INSTR',
+        controller = rm.open_resource('ASRL3::INSTR',
                                 baud_rate = 19200,
                                 read_termination = '\r\n',
                                 write_termination = '\r\n',
@@ -170,9 +175,15 @@ class Motion_Controller():
 
 
 
-if __name__ is "__main__":
-    controller = Motion_Controller()
-    controller.axes[0].get_pos()
+controller = Motion_Controller()
+
+for ax in controller.axes:
+    ax.set_velocity(0.2)
+    ax.set_abs_pos(25)
+
+while True:
+    controller.print_status()
+    time.sleep(0.5)
 
 
 
