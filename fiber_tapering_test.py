@@ -157,19 +157,38 @@ class Motion_Controller():
             ax.update_axis()
         
     
+    def ismoving(self) -> bool:
+
+        axes_moving = []
+        for ax in self.axes:
+            ax_moving = (ax.pos == ax.des_pos) and (ax.vel == 0.0)
+            axes_moving.append(ax_moving)
+        
+        return any(axes_moving)
+
 
 
     def print_status(self) -> None:
 
+        print('Axis'.ljust(7),
+              'Position'.ljust(14),
+              'Velocity'.ljust(16),
+              'des_pos'.ljust(14),
+              'set_vel'.ljust(16))
+        
         for ax in self.axes:
-            ax.update_axis()
-            print(f'Axis {ax.axis_nr}')
-            print(f'pos: {ax.pos} mm')
-            print(f'vel: {ax.vel} mm/s')
-            print(f'des_pos: {ax.des_pos} mm')
-            print(f'set_vel: {ax.set_vel} mm/s')
-            print()
-        print()
+
+            if ax == 3:
+                end = '\r'
+            else:
+                end = '\n'    
+
+            print(f'   {ax.axis_nr}'.ljust(7),
+                  f'{ax.pos} mm'.ljust(14),
+                  f'{ax.vel} mm/s'.ljust(16),
+                  f'{ax.des_pos} mm'.ljust(14),
+                  f'{ax.set_vel} mm/s'.ljust(16),
+                  end=end)
 
 
 
@@ -181,9 +200,10 @@ for ax in controller.axes:
     ax.set_velocity(0.2)
     ax.set_abs_pos(25)
 
-while True:
+while controller.ismoving():
+    controller.update_status()
     controller.print_status()
-    time.sleep(0.5)
+    time.sleep(0.2)
 
 
 
