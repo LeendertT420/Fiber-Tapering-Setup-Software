@@ -2,8 +2,6 @@ from pyvisa import ResourceManager
 from pyvisa.resources.serial import SerialInstrument
 import time
 
-
-
 class Controller_Axis():
     def __init__(self, axis_nr : int,
                  controller : SerialInstrument,
@@ -31,7 +29,7 @@ class Controller_Axis():
         """
         command = str(self.axis_nr) + 'TP'
         pos = self.controller.query(command)
-        return pos
+        return float(pos)
     
 
     def get_vel(self) -> float:
@@ -43,7 +41,7 @@ class Controller_Axis():
         """
         command = str(self.axis_nr) + 'TV'
         vel = self.controller.query(command)
-        return vel
+        return float(vel)
     
 
     def get_des_pos(self) -> float:
@@ -57,7 +55,7 @@ class Controller_Axis():
         """
         command = str(self.axis_nr) + 'DP'
         des_pos = self.controller.query(command)
-        return des_pos
+        return float(des_pos)
     
 
     def get_set_vel(self) -> float:
@@ -73,7 +71,7 @@ class Controller_Axis():
         """
         command = str(self.axis_nr) + 'DV'
         set_vel = self.controller.query(command)
-        return set_vel
+        return float(set_vel)
     
 
     def update_axis(self) -> None:
@@ -116,11 +114,14 @@ class Controller_Axis():
         command = str(self.axis_nr) + 'PR' + str(rel_pos)
         self.controller.write(command)
 
+
     def set_velocity(self, vel : float) -> None:
-        print(str(vel))
         command = str(self.axis_nr) + 'VA' + str(vel)
         self.controller.write(command)
 
+
+    def is_moving(self) -> bool:
+        return float(self.get_vel()) != 0.0
     
 
 
@@ -136,78 +137,138 @@ class Motion_Controller():
 
         self.axes = [ax1, ax2, ax3]
 
-        self.print_status()
+        self.update_status()
 
 
     def get_controller(self) -> SerialInstrument:
-        rm = ResourceManager()
+        """
+        Find instruments and creates instrument object to send
+        commands to the ESP300 motion controller
+        
+        Returns: 
+        - controller (SerialInstrument) :   instrument object from PyVisa package
+                                            that is used to send commands to controller"""
 
-        print(rm.list_resources())
-        controller = rm.open_resource('ASRL3::INSTR',
+        rm = ResourceManager()
+        resources = rm.list_resources()
+
+        if len(resources) == 0:
+            raise Exception('No resources found')
+
+        print('Found resources:')
+        for resource in resources:
+            print(resource)
+            
+
+        for instr in resources:
+            try:
+                instrument = rm.open_resource(instr,
                                 baud_rate = 19200,
                                 read_termination = '\r\n',
                                 write_termination = '\r\n',
                                 data_bits = 8)
-        return controller
+                
+                instrument_id = instrument.query("*IDN?")
+
+                if instrument_id == 'ESP300 Version 3.08 09/09/02':
+                    print(f'Motion controller succesfully found!')
+                    print(f'Instrument ID: \033[92m{instrument_id}\033[0m')
+                    return instrument
+                else:
+                    continue
+                
+            except:
+                continue
+
+        raise Exception('ESP300 motion controller was not found.')
 
 
     def update_status(self) -> None:
+        """
+        Update status of all axes. 
+        """
 
         for ax in self.axes:
             ax.update_axis()
         
     
-    def ismoving(self) -> bool:
+    def any_axis_moving(self) -> bool:
+        """
+        Determines whether any of the axes are moving.
 
-        axes_moving = []
+        Returns:
+        - bool :    True if at least one of the axes is moving,
+                    False if none of the axes is moving. 
+        """
+
         for ax in self.axes:
-            ax_moving = (ax.pos == ax.des_pos) and (ax.vel == 0.0)
-            axes_moving.append(ax_moving)
+            if ax.is_moving():
+                return True
+            
+        return False
+
+
+    def print_status(self, header : bool = True) -> None:
+        """
+        Prints positions and velocities of all three axes in table format
+
+        Params:
+        - header (bool) :   Determines whether header with field names is printed.
+                            Default is True. 
+        """
+
+        if header:
+            print('Axis'.ljust(7),
+                  'Position'.ljust(14),
+                  'Velocity'.ljust(16),
+                  'des_pos'.ljust(14),
+                  'set_vel'.ljust(16))
         
-        return any(axes_moving)
-
-
-
-    def print_status(self) -> None:
-
-        print('Axis'.ljust(7),
-              'Position'.ljust(14),
-              'Velocity'.ljust(16),
-              'des_pos'.ljust(14),
-              'set_vel'.ljust(16))
-        
-        for ax in self.axes:
-
-            if ax == 3:
-                end = '\r'
-            else:
-                end = '\n'    
-
-            print(f'   {ax.axis_nr}'.ljust(7),
+        for ax in self.axes:   
+            print(f'{ax.axis_nr}'.ljust(7),
                   f'{ax.pos} mm'.ljust(14),
                   f'{ax.vel} mm/s'.ljust(16),
                   f'{ax.des_pos} mm'.ljust(14),
-                  f'{ax.set_vel} mm/s'.ljust(16),
-                  end=end)
+                  f'{ax.set_vel} mm/s'.ljust(16))
 
 
 
 
 
-controller = Motion_Controller()
 
-for ax in controller.axes:
-    ax.set_velocity(0.2)
-    ax.set_abs_pos(25)
-
-while controller.ismoving():
-    controller.update_status()
-    controller.print_status()
-    time.sleep(0.2)
+if __name__ == '__main__':
 
 
+    controller = Motion_Controller()
+
+    for ax in controller.axes:
+       ax.set_velocity(0.2)
+       ax.set_abs_pos(0)
+
+    header = True
+
+    while controller.any_axis_moving():
+        controller.update_status()
+        controller.print_status(header=header)
+        print("\033[3A", end="")
+
+        header = False
+
+        time.sleep(0.2)
 
 
+    controller.print_status(header=header)
+
+
+COLOR = {
+    "HEADER": "\033[95m",
+    "BLUE": "\033[94m",
+    "GREEN": "\033[92m",
+    "RED": "\033[91m",
+    "ENDC": "\033[0m",
+}
+print()
+print('code made by \033[94mG\033[94m\033[93me\033[93m\033[92me\033[92m\033[91mr\033[91m\033[94mt \033[94m\033[93mT\033[93m\033[92mi\033[92m\033[91mm\033[91m\033[94mm\033[94m\033[93me\033[93m\033[92mr\033[92m\033[91mm\033[91m\033[94ma\033[94m\033[93mn\033[93m\033[0m')
             
 
 
