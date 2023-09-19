@@ -17,8 +17,6 @@ class Controller_Axis():
         self.des_pos = None
         self.set_vel = None
 
-        self.update_axis()
-
 
     def get_pos(self) -> float:
         """
@@ -124,6 +122,16 @@ class Controller_Axis():
         return float(self.get_vel()) != 0.0
     
 
+    def turn_on(self) -> None:
+        command = str(self.axis_nr) + 'MO'
+        self.controller.write(command)
+
+    
+    def turn_off(self) -> None:
+        command = str(self.axis_nr) + 'MF'
+        self.controller.write(command)
+    
+
 
 
 class Motion_Controller():
@@ -138,6 +146,7 @@ class Motion_Controller():
         self.axes = [ax1, ax2, ax3]
 
         self.update_status()
+
 
 
     def get_controller(self) -> SerialInstrument:
@@ -190,6 +199,16 @@ class Motion_Controller():
 
         for ax in self.axes:
             ax.update_axis()
+
+
+    def turn_on_all_axes(self) -> None:
+        for ax in self.axes:
+            ax.turn_on()
+
+
+    def turn_off_all_axes(self) -> None:
+        for ax in self.axes:
+            ax.turn_off()
         
     
     def any_axis_moving(self) -> bool:
@@ -230,6 +249,8 @@ class Motion_Controller():
                   f'{ax.vel} mm/s'.ljust(16),
                   f'{ax.des_pos} mm'.ljust(14),
                   f'{ax.set_vel} mm/s'.ljust(16))
+            
+    
 
 
 
@@ -241,9 +262,11 @@ if __name__ == '__main__':
 
     controller = Motion_Controller()
 
+    controller.turn_on_all_axes()
+
     for ax in controller.axes:
        ax.set_velocity(0.2)
-       ax.set_abs_pos(0)
+       ax.set_abs_pos(8.1)
 
     header = True
 
@@ -254,11 +277,12 @@ if __name__ == '__main__':
 
         header = False
 
-        time.sleep(0.2)
+        time.sleep(0.02)
 
 
     controller.print_status(header=header)
 
+    controller.turn_off_all_axes()
 
 COLOR = {
     "HEADER": "\033[95m",
@@ -268,7 +292,7 @@ COLOR = {
     "ENDC": "\033[0m",
 }
 print()
-print('code made by \033[94mG\033[94m\033[93me\033[93m\033[92me\033[92m\033[91mr\033[91m\033[94mt \033[94m\033[93mT\033[93m\033[92mi\033[92m\033[91mm\033[91m\033[94mm\033[94m\033[93me\033[93m\033[92mr\033[92m\033[91mm\033[91m\033[94ma\033[94m\033[93mn\033[93m\033[0m')
+print('code made by \033[95mG\033[95m\033[93me\033[93m\033[92me\033[92m\033[91mr\033[91m\033[94mt \033[94m\033[93mT\033[93m\033[92mi\033[92m\033[91mm\033[91m\033[94mm\033[94m\033[93me\033[93m\033[92mr\033[92m\033[91mm\033[91m\033[94ma\033[94m\033[93mn\033[93m\033[0m')
             
 
 
