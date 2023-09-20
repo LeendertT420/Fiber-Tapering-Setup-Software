@@ -7,10 +7,10 @@ if __name__ == '__main__':
     controller.turn_on_all_axes()
 
     for ax in controller.axes:
-       ax.set_velocity(0.2)
-       ax.set_abs_pos(8.1)
+       ax.set_velocity(0.05)
+       ax.set_abs_pos(5.32)
 
-    controller.print_status()
+    controller.print_status(update_interval=1)
 
     controller.turn_off_all_axes()
 

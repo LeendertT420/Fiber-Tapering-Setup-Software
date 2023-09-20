@@ -34,8 +34,12 @@ class AxisController():
         self.home_pos = home_pos
         self.pos = None
         self.vel = None
+
         self.des_pos = None
+        self.tot_travel_time = None
+
         self.set_vel = None
+
 
 
     def get_pos(self) -> float:
@@ -62,20 +66,6 @@ class AxisController():
         return float(vel)
     
 
-    def get_des_pos(self) -> float:
-        """
-        Queries the desired destination position of the axis relative to the home 
-        position. Only relevant if the axis is moving. It gives the position 
-        the axis is moving to. 
-
-        Returns:
-            - des_pos (float) : destination position in mm
-        """
-        command = str(self.axis_nr) + 'DP?' 
-        des_pos = self.controller.query(command)
-        return float(des_pos)
-    
-
     def get_des_vel(self) -> float:
         """
         Queries the desired velocity of the axis. This is the velocity of the axis
@@ -98,7 +88,6 @@ class AxisController():
         """
         self.pos = self.get_pos()
         self.vel = self.get_vel()
-        self.des_pos = self.get_des_pos()
         self.set_vel = self.get_des_vel()
 
 
@@ -116,6 +105,9 @@ class AxisController():
         command = str(self.axis_nr) + 'PA' + str(abs_pos)
         self.controller.write(command)
 
+        self.des_pos = abs_pos 
+
+
 
     def set_rel_pos(self, rel_pos : float) -> None:
         """
@@ -131,6 +123,8 @@ class AxisController():
         
         command = str(self.axis_nr) + 'PR' + str(rel_pos)
         self.controller.write(command)
+
+        self.des_pos = abs_pos
 
 
     def set_velocity(self, vel : float) -> None:
@@ -169,4 +163,11 @@ class AxisController():
         Turn on axis. Axis cannot move when it is turned off.
         """
         command = str(self.axis_nr) + 'MF'
+        self.controller.write(command)
+
+    def home(self) -> None:
+        """
+        Moves to home position of axis
+        """
+        command = str(self.axis_nr) + 'OR0'
         self.controller.write(command)

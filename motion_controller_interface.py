@@ -82,6 +82,13 @@ class MotionControllerInterface():
         """
         for ax in self.axes:
             ax.turn_off()
+
+    def home_all_axes(self) -> None:
+        """
+        Homes all axes
+        """
+        for ax in self.axes:
+            ax.home()
         
     
     def any_axis_moving(self) -> bool:
@@ -121,30 +128,48 @@ class MotionControllerInterface():
 
         while self.any_axis_moving() or first_iteration:
 
-            self.update_status()
-                
-            for ax in self.axes:
-                completion_time = abs(ax.pos-ax.des_pos)/ax.vel
-
-                if first_iteration: 
-                    tot_completion_time = completion_time
-
-                perc_complete = (tot_completion_time - completion_time) / tot_completion_time
-
-
-                print(f'{ax.axis_nr}'.ljust(7),
-                      f'{ax.pos:.7f} mm'.ljust(14),
-                      f'{ax.vel:.7f} mm/s'.ljust(16),
-                      f'{ax.des_pos:.7f} mm'.ljust(14),
-                      f'{ax.set_vel:.7f} mm/s'.ljust(16),
-                      f'{completion_time:.2f} s'.ljust(22),
-                      f'{(perc_complete*100):.2f} %')
+            self.print_metrics(first_iteration=first_iteration)
                 
             print("\033[3A", end="")
 
             first_iteration = False
 
             time.sleep(update_interval)
+        
+        self.print_metrics(first_iteration=False)
+
+        print('\n\n')
+
+
+    def print_metrics(self, first_iteration : bool) -> None:
+        self.update_status()
+
+
+        for i, ax in enumerate(self.axes):
+
+            if ax.vel != 0.0:
+                    completion_time = abs(ax.pos-ax.des_pos)/ax.vel
+            else:
+                    completion_time = 0
+
+            if first_iteration: 
+                    ax.tot_travel_time = abs(ax.pos-ax.des_pos)/ax.set_vel
+
+            if tot_completion_time[i] != 0:
+                    perc_complete = (tot_completion_time[i] - completion_time) / tot_completion_time[i]
+            else:
+                perc_complete = 1
+
+
+            print(f'{ax.axis_nr}'.ljust(7),
+                  f'{ax.pos:.7f} mm'.ljust(14),
+                  f'{ax.vel:.7f} mm/s'.ljust(16),
+                  f'{ax.des_pos:.7f} mm'.ljust(14),
+                  f'{ax.set_vel:.7f} mm/s'.ljust(16),
+                  f'{completion_time:.2f} s'.ljust(22),
+                  f'{(perc_complete*100):.2f} %')
+
+
 
             
         
