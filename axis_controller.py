@@ -3,6 +3,7 @@
 
 
 from pyvisa.resources.serial import SerialInstrument
+from typing import Tuple
 
 
 class AxisController():
@@ -31,15 +32,20 @@ class AxisController():
 
         self.controller = controller
         
-        self.home_pos = home_pos
+        self.moving = None
+        self.on = None
+        self.homed = False
+
         self.pos = None
         self.vel = None
 
         self.des_pos = None
+
         self.tot_travel_time = None
+        self.travel_time = None
+        self.perc_done = None
 
-        self.set_vel = None
-
+        self.des_vel = None
 
 
     def get_pos(self) -> float:
@@ -88,8 +94,11 @@ class AxisController():
         """
         self.pos = self.get_pos()
         self.vel = self.get_vel()
-        self.set_vel = self.get_des_vel()
-
+        self.des_vel = self.get_des_vel()
+        self.moving = self.is_moving()
+        
+        if self.des_pos is not None:
+            self.travel_time, self.perc_done = self.get_travel_time()
 
     def set_abs_pos(self, abs_pos : float) -> None:
         """
@@ -99,14 +108,16 @@ class AxisController():
         params:
             - abs_pos (float) : absolute position to move to in mm
         """
-        if abs_pos < self.home_pos or abs_pos > 25 + self.home_pos:
+        if abs_pos < 0 or abs_pos > 25:
             raise Exception("Position is out of range")
-        
+        elif not self.homed:
+            raise Exception(f"Axis {self.axis_nr} is not homed yet")
+
         command = str(self.axis_nr) + 'PA' + str(abs_pos)
         self.controller.write(command)
 
         self.des_pos = abs_pos 
-
+        self.tot_travel_time = abs(abs_pos-self.pos)/self.des_vel
 
 
     def set_rel_pos(self, rel_pos : float) -> None:
@@ -118,8 +129,10 @@ class AxisController():
         """
         abs_pos = rel_pos + self.get_pos()
 
-        if abs_pos < self.home_pos or abs_pos > 25 + self.home_pos:
+        if abs_pos < 0 or abs_pos > 25:
             raise Exception("Position is out of range")
+        elif not self.homed:
+            raise Exception(f"Axis {self.axis_nr} is not homed yet")
         
         command = str(self.axis_nr) + 'PR' + str(rel_pos)
         self.controller.write(command)
@@ -127,7 +140,7 @@ class AxisController():
         self.des_pos = abs_pos
 
 
-    def set_velocity(self, vel : float) -> None:
+    def set_vel(self, vel : float) -> None:
         """
         Set the velocity of the axis in mm/s
         
@@ -136,6 +149,8 @@ class AxisController():
         """
         command = str(self.axis_nr) + 'VA' + str(vel)
         self.controller.write(command)
+
+        self.des_vel = vel
 
 
     def is_moving(self) -> bool:
@@ -148,8 +163,8 @@ class AxisController():
         """
         command = str(self.axis_nr) + 'MD'
         notmoving = self.controller.query(command)
-        ismoving = not bool(float(notmoving))
-        return ismoving
+        moving = not bool(float(notmoving))
+        return moving
     
 
     def turn_on(self) -> None:
@@ -158,6 +173,7 @@ class AxisController():
         """
         command = str(self.axis_nr) + 'MO'
         self.controller.write(command)
+        self.on = True
 
     
     def turn_off(self) -> None:
@@ -166,6 +182,8 @@ class AxisController():
         """
         command = str(self.axis_nr) + 'MF'
         self.controller.write(command)
+        self.on = False
+
 
     def home(self) -> None:
         """
@@ -173,3 +191,19 @@ class AxisController():
         """
         command = str(self.axis_nr) + 'OR0'
         self.controller.write(command)
+        self.homed = True
+
+
+    def stop(self) -> None:
+        """
+        Stops motion of axis with set deceleration. 
+        """
+        command = str(self.axis_nr) + 'ST'
+        self.controller.write(command)
+        self.moving = False
+
+
+    def get_travel_time(self) -> Tuple[float, float]:
+        travel_time = abs(self.des_pos - self.pos)/self.vel
+        perc_done = travel_time/self.tot_travel_time
+        return travel_time, perc_done
