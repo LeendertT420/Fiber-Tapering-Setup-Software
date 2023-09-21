@@ -96,7 +96,6 @@ class AxisController():
         self.vel = self.get_vel()
         self.des_vel = self.get_des_vel()
         self.moving = self.is_moving()
-        
         if self.des_pos is not None:
             self.travel_time, self.perc_done = self.get_travel_time()
 

@@ -217,7 +217,8 @@ class MotionControllerInterface():
               'des_pos'.ljust(14),
               'des_vel'.ljust(16),
               'exp. completion time'.ljust(22),
-              '% completed'.ljust(7))    
+              '% completed'.ljust(7))
+    
         elif overwrite:
             print("\033[3A", end="")
 
