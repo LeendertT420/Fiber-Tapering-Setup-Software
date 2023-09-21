@@ -116,17 +116,11 @@ class MotionControllerInterface():
                             Default is True. 
         """
 
-        print('Axis'.ljust(7),
-              'Position'.ljust(14),
-              'Velocity'.ljust(16),
-              'des_pos'.ljust(14),
-              'des_vel'.ljust(16),
-              'exp. completion time'.ljust(22),
-              '% completed'.ljust(7))
+        self.print_header()
         
         first_iteration = True
 
-        while self.any_axis_moving() or first_iteration:
+        while self.any_axis_moving():
 
             self.print_metrics(first_iteration=first_iteration)
                 
@@ -148,26 +142,31 @@ class MotionControllerInterface():
         for i, ax in enumerate(self.axes):
 
             if ax.vel != 0.0:
-                    completion_time = abs(ax.pos-ax.des_pos)/ax.vel
+                    travel_time = abs(ax.pos-ax.des_pos)/ax.vel
             else:
-                    completion_time = 0
+                    travel_time = 0
 
             if first_iteration: 
-                    ax.tot_travel_time = abs(ax.pos-ax.des_pos)/ax.set_vel
+                    ax.tot_travel_time = travel_time
 
-            if tot_completion_time[i] != 0:
-                    perc_complete = (tot_completion_time[i] - completion_time) / tot_completion_time[i]
-            else:
-                perc_complete = 1
-
+            perc_complete = 1
 
             print(f'{ax.axis_nr}'.ljust(7),
                   f'{ax.pos:.7f} mm'.ljust(14),
                   f'{ax.vel:.7f} mm/s'.ljust(16),
                   f'{ax.des_pos:.7f} mm'.ljust(14),
                   f'{ax.set_vel:.7f} mm/s'.ljust(16),
-                  f'{completion_time:.2f} s'.ljust(22),
+                  f'{travel_time:.2f} s'.ljust(22),
                   f'{(perc_complete*100):.2f} %')
+            
+    def print_header(self):
+        print('Axis'.ljust(7),
+              'Position'.ljust(14),
+              'Velocity'.ljust(16),
+              'des_pos'.ljust(14),
+              'des_vel'.ljust(16),
+              'exp. completion time'.ljust(22),
+              '% completed'.ljust(7))
 
 
 

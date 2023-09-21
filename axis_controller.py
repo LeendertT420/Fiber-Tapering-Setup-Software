@@ -146,7 +146,9 @@ class AxisController():
             - ismoving (bool) :     returns True if axis has non-zero velocity,
                                     returns False otherwise
         """
-        ismoving = self.get_vel() != 0.0
+        command = str(self.axis_nr) + 'MD'
+        notmoving = self.controller.query(command)
+        ismoving = not bool(float(notmoving))
         return ismoving
     
 

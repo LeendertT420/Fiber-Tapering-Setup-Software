@@ -8,7 +8,7 @@ if __name__ == '__main__':
 
     for ax in controller.axes:
        ax.set_velocity(0.05)
-       ax.set_abs_pos(5.32)
+       ax.set_abs_pos(23)
 
     controller.print_status(update_interval=1)
 
