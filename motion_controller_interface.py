@@ -1,7 +1,7 @@
 from pyvisa import ResourceManager
 from pyvisa.resources.serial import SerialInstrument
 from axis_controller import AxisController
-from typing import Tuple
+from typing import Tuple, List
 import time
 
 
@@ -92,6 +92,14 @@ class MotionControllerInterface():
         """
         for ax in self.axes:
             ax.home()
+            while ax.is_moving():
+                print(f'Homing axis {ax.axis_nr}...')
+                print("\033[1A", end="")
+                time.sleep(0.1)
+        
+        print('Homing of all axes succesfully completed')
+                
+
 
 
     def stop_all_axes(self) -> None:
@@ -153,10 +161,15 @@ class MotionControllerInterface():
                                  Axis {axis_nr}: {message}'''
 
         return error_occured, exception_text
+    
+    def exception_handler(self, exception : str) -> None:
+        print(exception)
+        self.stop_all_axes()
+        self.turn_off_all_axes()
 
 
-    def perform_motion(self, positions : list[float],
-                       velocities : list[float],
+    def perform_motion(self, positions : List[float],
+                       velocities : List[float],
                        rel : bool = False) -> None:
         
         self.turn_on_all_axes()
@@ -167,7 +180,7 @@ class MotionControllerInterface():
 
         for ax, pos, vel in zip(self.axes, positions, velocities):
             ax.set_vel(vel)
-            if rel:
+            if rel == True:
                 ax.set_rel_pos(pos)
             else:
                 ax.set_abs_pos(pos)
@@ -189,9 +202,11 @@ class MotionControllerInterface():
         """
         self.print_metrics(header=True, overwrite=False)
         
-        while self.any_axis_moving():
+        time.sleep(update_interval)
 
-            self.update_status()
+        self.update_status()
+
+        while self.any_axis_moving():
 
             error_occured, message = self.get_errors()
             if error_occured:
@@ -200,6 +215,8 @@ class MotionControllerInterface():
             self.print_metrics(header = False, overwrite=True)
 
             time.sleep(update_interval)
+
+            self.update_status()
         
         self.print_metrics(header=False, overwrite=True)
 
@@ -223,13 +240,13 @@ class MotionControllerInterface():
             print("\033[3A", end="")
 
         for ax in self.axes:
-            print(f'{ax.axis_nr}'.ljust(7),
-                  f'{ax.pos:.7f} mm'.ljust(14),
-                  f'{ax.vel:.7f} mm/s'.ljust(16),
-                  f'{ax.des_pos:.7f} mm'.ljust(14),
-                  f'{ax.des_vel:.7f} mm/s'.ljust(16),
-                  f'{ax.travel_time:.2f} s'.ljust(22),
-                  f'{(ax.perc_done*100):.2f} %')
+            print(f'{str(ax.axis_nr)}'.ljust(7),
+                  f'{str(ax.pos)} mm'.ljust(14),
+                  f'{str(ax.vel)} mm/s'.ljust(16),
+                  f'{str(ax.des_pos)} mm'.ljust(14),
+                  f'{str(ax.des_vel)} mm/s'.ljust(16),
+                  f'{str(ax.travel_time)} s'.ljust(22),
+                  f'{str(ax.perc_done)} %')
         
 
 
